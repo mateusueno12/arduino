@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Servo Motores - Arduino</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f7f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 350px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .btn-connect {
+      background-color: #008cba;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+
+    .btn-connect:hover {
+      background-color: #005f73;
+    }
+
+    .control-group {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .led-indicator {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background-color: #ccc;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    .led-active {
+      background-color: #2ec4b6;
+      box-shadow: 0 0 10px #2ec4b6;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Controle Arduino</h1>
+    <button class="btn-connect" id="btnConnect">Conectar Arduino</button>
+
+    <div class="control-group">
+      <div class="control-header">
+        <label for="servo1">Servo 1: <span id="val1">0</span>°</label>
+        <div class="led-indicator" id="led1"></div>
+      </div>
+      <input type="range" id="servo1" min="0" max="180" value="0" disabled>
+    </div>
+
+    <div class="control-group">
+      <div class="control-header">
+        <label for="servo2">Servo 2: <span id="val2">0</span>°</label>
+        <div class="led-indicator" id="led2"></div>
+      </div>
+      <input type="range" id="servo2" min="0" max="180" value="0" disabled>
+    </div>
+  </div>
+
+  <script>
+    let port;
+    let writer;
+
+    const btnConnect = document.getElementById('btnConnect');
+    const servo1 = document.getElementById('servo1');
+    const servo2 = document.getElementById('servo2');
+    const val1 = document.getElementById('val1');
+    const val2 = document.getElementById('val2');
+    const led1 = document.getElementById('led1');
+    const led2 = document.getElementById('led2');
+
+    // Conexão via Web Serial API
+    btnConnect.addEventListener('click', async () => {
+      if ('serial' in navigator) {
+        try {
+          port = await navigator.serial.requestPort();
+          await port.open({ baudRate: 9600 });
+          
+          const textEncoder = new TextEncoderStream();
+          const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+          writer = textEncoder.writable.getWriter();
+
+          btnConnect.innerText = "Conectado";
+          btnConnect.style.backgroundColor = "#2ec4b6";
+          servo1.disabled = false;
+          servo2.disabled = false;
+        } catch (err) {
+          alert("Erro ao conectar: " + err);
+        }
+      } else {
+        alert("Web Serial API não é suportada neste navegador. Use o Google Chrome ou Edge.");
+      }
+    });
+
+    // Enviar dados para o Arduino
+    async function sendCommand(command) {
+      if (writer) {
+        await writer.write(command + "\n");
+      }
+    }
+
+    // Eventos dos Sliders
+    servo1.addEventListener('input', (e) => {
+      const angle = e.target.value;
+      val1.innerText = angle;
+      if (angle > 0) {
+        led1.classList.add('led-active');
+      } else {
+        led1.classList.remove('led-active');
+      }
+      sendCommand(`S1:${angle}`);
+    });
+
+    servo2.addEventListener('input', (e) => {
+      const angle = e.target.value;
+      val2.innerText = angle;
+      if (angle > 0) {
+        led2.classList.add('led-active');
+      } else {
+        led2.classList.remove('led-active');
+      }
+      sendCommand(`S2:${angle}`);
+    });
+  </script>
+</body>
+</html>
